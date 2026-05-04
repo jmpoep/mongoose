@@ -266,7 +266,7 @@
     el.v2 = v2;
   };
 
-  function handle_upload(el) {
+  function upload(el, is_ota) {
     if (el.bound) return;
     el.bound = true;
     el.addEventListener("change", function (ev) {
@@ -275,7 +275,7 @@
       const reader = new FileReader();
       reader.readAsArrayBuffer(f);
       reader.onload = function () {
-        const url = `files/${encodeURIComponent(f.name)}`;
+        const url = is_ota ? 'api/ota' : `fs/${encodeURIComponent(f.name)}`;
         let begin = Date.now(), body = reader.result, ok = false;
         // console.log(2, url, body);
         fetch(url, { method: 'POST', body })
@@ -289,6 +289,9 @@
       ev.preventDefault();
     });
   };
+
+  const handle_upload = el => upload(el, false);
+  const handle_ota = el => upload(el, true);
 
   function substituteExpressions(text, context) {
     const expected = { string: 1, number: 1, boolean: 1 };
@@ -320,14 +323,17 @@
           if (v !== attr.value) attr.value = v;
         }
       }
-      const datakeys = { bind: 1, save: 1, cancel: 1, repeat: 1, upload: 1 };
+      //const datakeys = { bind: 1, save: 1, cancel: 1, repeat: 1, upload: 1, ota: 1 };
+      const handlers = {
+        bind: handle_bind,
+        save: handle_save,
+        cancel: handle_cancel,
+        repeat: handle_repeat,
+        upload: handle_upload,
+        ota: handle_ota,
+      };
       for (const [key, val] of Object.entries(el.dataset)) {
-        if (!datakeys[key]) continue;
-        if (key == 'bind') handle_bind(el, val, context);
-        if (key == 'save') handle_save(el, val.split(/\s*,\s*/));
-        if (key == 'cancel') handle_cancel(el, val.split(/\s*,\s*/));
-        if (key == 'repeat') handle_repeat(el, val, context);
-        if (key == 'upload') handle_upload(el);
+        handlers[key]?.(el, val, context);
       }
     });
   };
